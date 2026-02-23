@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>北宋陪房丫鬟模拟器</title>
+    <style>
+        :root {
+            --bg-color: #fdf6ec;
+            --card-bg: #ffffff;
+            --primary-pink: #f4cfdf;
+            --accent-green: #b8d8be;
+            --text-dark: #5d5246;
+            --border-gold: #d4b185;
+            --shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: "PingFang SC", "Microsoft YaHei", serif;
+            color: var(--text-dark);
+            line-height: 1.5;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 手机容器限制 */
+        #game-container {
+            width: 100vw;
+            max-width: 480px;
+            min-height: 100vh;
+            background: var(--bg-color);
+            padding: 15px;
+            position: relative;
+            overflow-x: hidden;
+            border-left: 1px solid #eee;
+            border-right: 1px solid #eee;
+        }
+
+        /* 顶部标题 */
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-bottom: 2px double var(--border-gold);
+        }
+        .header h1 { margin: 0; font-size: 1.4rem; color: #a67c52; }
+        .header p { margin: 5px 0 0; font-size: 0.85rem; color: #888; }
+
+        /* 通用卡片样式 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--primary-pink);
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .card-title {
+            font-weight: bold;
+            color: #c09060;
+            border-left: 4px solid var(--primary-pink);
+            padding-left: 8px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        /* 状态属性栏 */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .status-item {
+            background: #fffafa;
+            padding: 5px 8px;
+            border-radius: 6px;
+        }
+
+        /* 日记样式 */
+        .diary-box {
+            background: #fffdf9;
+            border: 1px dashed var(--border-gold);
+            padding: 12px;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+        .diary-meta {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            color: #a67c52;
+        }
+
+        /* NPC展示区 */
+        .npc-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 5px;
+        }
+        .npc-mini-card {
+            min-width: 140px;
+            background: #fdfcfb;
+            border: 1px solid #eee;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        /* 日常履历 */
+        .log-box {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .log-item { margin-bottom: 4px; border-bottom: 1px solid #efefef; }
+
+        /* 按钮区 */
+        .btn-group {
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-color);
+            padding: 10px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #f4cfdf 0%, #d4b185 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:active { transform: scale(0.98); }
+
+        /* 视觉强调 */
+        .highlight { color: #d9534f; font-weight: bold; }
+        .money { color: #b8860b; font-weight: bold; }
+        .tag {
+            display: inline-block;
+            background: var(--accent-green);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-right: 4px;
+        }
+
+        /* 模态框 */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            width: 85%;
+            max-height: 70%;
+            border-radius: 15px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="header">
+        <h1>【北宋陪房丫鬟模拟器】</h1>
+        <p>小红书：云朵の | 汴京世禄·陪房传奇</p>
+    </div>
+
+    <div id="player-card" class="card">
+        <div class="card-title">🌸 个人状态</div>
+        <div id="player-basic" class="status-grid">
+            </div>
+    </div>
+
+    <div id="diary-card" class="card">
+        <div class="card-title">📜 随身笔记 (日记)</div>
+        <div class="diary-box">
+            <div id="diary-meta" class="diary-meta"></div>
+            <div id="diary-content"></div>
+            <hr style="border:0; border-top:1px dotted #ccc;">
+            <div id="diary-tasks" style="font-size: 0.8rem; color: #666;"></div>
+        </div>
+    </div>
+
+    <div id="env-card" class="card">
+        <div class="card-title">🏡 所在府邸与家族</div>
+        <div id="env-info" style="font-size: 0.9rem;"></div>
+    </div>
+
+    <div id="npc-card" class="card">
+        <div class="card-title">👥 府中众人 (点击查看纠葛)</div>
+        <div id="npc-list" class="npc-scroll"></div>
+    </div>
+
+    <div id="log-card" class="card">
+        <div class="card-title">📢 汴京风闻/府中履历</div>
+        <div id="event-logs" class="log-box"></div>
+    </div>
+
+    <div class="btn-group">
+        <button onclick="nextMonth()">推进下一月</button>
+        <button onclick="viewAssets()" style="background: linear-gradient(135deg, #b8d8be 0%, #88b091 100%);">查看资产一览</button>
+    </div>
+</div>
+
+<div id="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" id="modal-body"></div>
+</div>
+
+<script>
+    // --- 游戏核心数据 ---
+    let state = {
+        time: { year: 1040, month: 3, season: "春", day: 1, week: "一" },
+        player: {
+            name: "小红",
+            realName: "林婉儿",
+            age: 6,
+            level: "粗使丫鬟",
+            salary: 600,
+            money: 100, // 私房钱
+            attrs: { appearance: 70, heart: 80, health: 90, moral: 85, skill_sew: 5, skill_read: 0, skill_acc: 0 },
+            body: { height: "115cm", weight: "20kg", chest: "平", comment: "身子尚未长开，略显消瘦。" },
+            tags: ["细心", "勤奋", "灵巧"],
+            mood: "平静",
+            pregnant: null,
+            period: false
+        },
+        family: {
+            assets: 2000,
+            house: "大杂院耳房",
+            transport: "步行",
+            members: []
+        },
+        master: {
+            houseName: "盛府",
+            lady: "王氏 (出身太原王氏)",
+            husband: "盛官人 (五品工部员外郎)"
+        },
+        npcs: [],
+        logs: []
+    };
+
+    const NAMES = ["春桃", "翠缕", "金钏", "彩云", "墨竹", "雪雁", "坠儿"];
+    const WEATHERS = ["晴空万里", "微雨霏霏", "春寒料峭", "阴雨绵绵", "燥热难当"];
+    const MOODS = ["喜悦", "忧思", "忐忑", "疲惫", "满怀希望"];
+
+    // --- 初始化函数 ---
+    function initGame() {
+        generateFamily();
+        generateNPCs(8);
+        updateUI();
+    }
+
+    function generateFamily() {
+        state.family.members = [
+            { role: "父", job: "马夫", salary: 800 },
+            { role: "母", job: "厨房帮工", salary: 500 }
+        ];
+    }
+
+    function generateNPCs(count) {
+        for (let i = 0; i < count; i++) {
+            let npc = {
+                id: i,
+                name: NAMES[Math.floor(Math.random() * NAMES.length)] + i,
+                age: 10 + Math.floor(Math.random() * 20),
+                appearance: Math.floor(Math.random() * 100),
+                heart: Math.floor(Math.random() * 100),
+                relation: Math.floor(Math.random() * 40 + 30),
+                outfit: "青色麻布长裙，头簪木钗",
+                mind: "今日的差事千万别出差错...",
+                logs: []
+            };
+            state.npcs.push(npc);
+        }
+    }
+
+    // --- 逻辑推进 ---
+    function nextMonth() {
+        // 1. 时间推进
+        state.time.month++;
+        if (state.time.month > 12) {
+            state.time.month = 1;
+            state.time.year++;
+            state.player.age++;
+        }
+
+        // 2. 财务结算
+        state.player.money += state.player.salary;
+        let familyIncome = state.family.members.reduce((sum, m) => sum + m.salary, 0);
+        state.family.assets += familyIncome;
+
+        // 3. 随机事件
+        triggerRandomEvent();
+
+        // 4. NPC互动 (生成15条逻辑履历)
+        generateDailyLogs();
+
+        updateUI();
+        showModal(`<h3>📅 岁月流转</h3><p>已进入 <b>${state.time.year}年 ${state.time.month}月</b>。<br>本月月钱 <span class="money">${state.player.salary}文</span> 已发放至私房钱。</p>`);
+    }
+
+    function triggerRandomEvent() {
+        const events = [
+            { text: "在角门捡到一枚铜钱。", effect: () => state.player.money += 1 },
+            { text: "因洒扫勤快，管事嬷嬷赏了20文。", effect: () => state.player.money += 20 },
+            { text: "不小心打碎了一个粗瓷碗，被扣月钱10文。", effect: () => state.player.money -= 10 }
+        ];
+        let ev = events[Math.floor(Math.random() * events.length)];
+        ev.effect();
+        state.logs.unshift(`【事件】${ev.text}`);
+    }
+
+    function generateDailyLogs() {
+        for (let i = 0; i < 15; i++) {
+            let n1 = state.npcs[Math.floor(Math.random() * state.npcs.length)];
+            let n2 = state.npcs[Math.floor(Math.random() * state.npcs.length)];
+            if (n1.id === n2.id) continue;
+
+            let actions = ["私下议论克扣月钱", "一起在后院绣花", "因争抢热水起了口角", "分享了半块梅花糕"];
+            let act = actions[Math.floor(Math.random() * actions.length)];
+            let logStr = `${state.time.month}月${Math.floor(Math.random() * 28 + 1)}日：${n1.name} 与 ${n2.name} ${act}。`;
+            
+            n1.logs.push(logStr);
+            n2.logs.push(logStr);
+            state.logs.unshift(logStr);
+        }
+    }
+
+    // --- UI渲染 ---
+    function updateUI() {
+        // 1. 玩家基本信息
+        const p = state.player;
+        document.getElementById('player-basic').innerHTML = `
+            <div class="status-item">👤 姓名：${p.name} (${p.realName})</div>
+            <div class="status-item">🎂 年龄：${p.age} 岁</div>
+            <div class="status-item">🏆 等级：<span class="highlight">${p.level}</span></div>
+            <div class="status-item">💰 私房：<span class="money">${p.money}文</span></div>
+            <div class="status-item">👗 容貌：${p.attrs.appearance}</div>
+            <div class="status-item">💖 心性：${p.attrs.heart}</div>
+            <div class="status-item">🧶 女红：${p.attrs.skill_sew}</div>
+            <div class="status-item">💪 体魄：${p.attrs.health}</div>
+        `;
+
+        // 2. 日记
+        document.getElementById('diary-meta').innerHTML = `
+            <span>📅 ${state.time.year}年${state.time.month}月</span>
+            <span>☁️ ${WEATHERS[Math.floor(Math.random()*WEATHERS.length)]}</span>
+            <span>🎭 心情：${MOODS[Math.floor(Math.random()*MOODS.length)]}</span>
+        `;
+        document.getElementById('diary-content').innerText = `今日在${state.master.houseName}当差，${state.player.level}的工作依旧繁重。听${state.npcs[0].name}说，汴京城的矾楼最近又出新词了...`;
+        document.getElementById('diary-tasks').innerHTML = `<b>今日任务：</b> 洒扫庭院(完成√) | 浆洗衣服(完成√)`;
+
+        // 3. 府邸信息
+        document.getElementById('env-info').innerHTML = `
+            📍 <b>${state.master.houseName}</b><br>
+            主母：${state.master.lady}<br>
+            主公：${state.master.husband}<br>
+            <span class="tag">家生子</span> <span class="tag">阶级：仆役</span>
+        `;
+
+        // 4. NPC 列表
+        let npcHtml = "";
+        state.npcs.forEach(n => {
+            npcHtml += `
+                <div class="npc-mini-card" onclick="viewNpc(${n.id})">
+                    <b>${n.name}</b> (${n.age}岁)<br>
+                    好感：${n.relation}<br>
+                    <small>${n.outfit}</small>
+                </div>
+            `;
+        });
+        document.getElementById('npc-list').innerHTML = npcHtml;
+
+        // 5. 日常履历
+        document.getElementById('event-logs').innerHTML = state.logs.slice(0, 30).map(l => `<div class="log-item">${l}</div>`).join("");
+    }
+
+    // --- 弹窗功能 ---
+    function showModal(content) {
+        document.getElementById('modal-body').innerHTML = content;
+        document.getElementById('modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    function viewNpc(id) {
+        let n = state.npcs[id];
+        let content = `
+            <h3>${n.name} 的档案</h3>
+            <p><b>容貌：</b> ${n.appearance} | <b>心性：</b> ${n.heart}</p>
+            <p><b>穿搭：</b> ${n.outfit}</p>
+            <p><b>心理：</b> <span style="color:#888">"${n.mind}"</span></p>
+            <hr>
+            <h4>互动往事</h4>
+            <div style="font-size:0.8rem">${n.logs.slice(-5).join("<br>") || "暂无重要纠葛"}</div>
+        `;
+        showModal(content);
+    }
+
+    function viewAssets() {
+        let p = state.player;
+        let content = `
+            <h3>🏮 家族资产一览</h3>
+            <p><b>家族总资产：</b> <span class="money">${state.family.assets}文</span></p>
+            <p><b>现居环境：</b> ${state.family.house}</p>
+            <p><b>代步工具：</b> ${state.family.transport}</p>
+            <hr>
+            <h4>私房钱明细</h4>
+            <p><b>个人积蓄：</b> ${p.money}文</p>
+            <p><b>当前月钱：</b> ${p.salary}文/月</p>
+            <button onclick="closeModal()" style="width:100%; margin-top:10px;">返回</button>
+        `;
+        showModal(content);
+    }
+
+    // 启动
+    initGame();
+</script>
+
+</body>
+</html>
