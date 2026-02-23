@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>北宋陪房丫鬟模拟器 - 终极版</title>
+    <style>
+        :root {
+            --song-bg: #f5f1e9;
+            --song-ink: #3a3530;
+            --song-red: #b35c44; /* 茜红色 */
+            --song-green: #6b8e85; /* 豆绿 */
+            --song-gold: #c5a367;
+            --card-bg: #ffffff;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--song-bg);
+            color: var(--song-ink);
+            font-family: "STSong", "SimSun", serif;
+            display: flex; justify-content: center;
+        }
+
+        #mobile-container {
+            width: 100vw; max-width: 500px;
+            min-height: 100vh;
+            padding: 15px;
+            background: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+            position: relative;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            text-align: center; border-bottom: 2px solid var(--song-ink);
+            margin-bottom: 15px; padding-bottom: 5px;
+        }
+        .header h1 { margin: 0; font-size: 1.5rem; color: var(--song-red); }
+        .header p { margin: 5px 0; font-size: 0.8rem; letter-spacing: 2px; }
+
+        /* 卡片布局 */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #dcd3c1;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 12px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .card-title {
+            font-size: 0.9rem; font-weight: bold;
+            border-left: 3px solid var(--song-red);
+            padding-left: 8px; margin-bottom: 10px;
+            color: var(--song-ink);
+        }
+
+        /* 属性网格 */
+        .grid-info {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+            font-size: 0.85rem;
+        }
+        .grid-item { background: #fdfaf5; padding: 6px; border-radius: 4px; border: 0.5px solid #eee; }
+
+        /* 日记本样式 */
+        .diary-box {
+            background: #fffdf9; border: 1px dashed var(--song-gold);
+            padding: 10px; font-size: 0.85rem; line-height: 1.6;
+        }
+        .diary-meta { border-bottom: 1px solid #eee; margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--song-red); }
+
+        /* 关系网滚动 */
+        .npc-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
+        .npc-mini-card {
+            min-width: 130px; background: #f9f9f9; border-radius: 6px;
+            padding: 8px; font-size: 0.75rem; border: 1px solid #eee;
+        }
+
+        /* 动态履历 */
+        .log-container {
+            max-height: 120px; overflow-y: auto;
+            background: #fdfcfb; padding: 8px; font-size: 0.8rem;
+            border-radius: 4px; border: 1px inset #eee;
+        }
+        .log-line { margin-bottom: 4px; border-bottom: 1px solid #f0f0f0; padding-bottom: 2px; }
+
+        /* 按钮组 */
+        .footer-btns {
+            position: sticky; bottom: 15px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        }
+        button {
+            background: var(--song-ink); color: #fff;
+            border: none; padding: 12px; border-radius: 5px;
+            font-weight: bold; font-family: "STSong";
+        }
+        button:active { background: var(--song-red); }
+
+        /* 特殊高亮 */
+        .highlight { color: var(--song-red); font-weight: bold; }
+        .tag { font-size: 0.7rem; background: var(--song-green); color: white; padding: 1px 4px; border-radius: 3px; margin-right: 2px; }
+        .period-tag { background: #d9534f; }
+
+        /* 模态框 */
+        #modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-body {
+            background: white; width: 90%; max-height: 80%; border-radius: 10px;
+            padding: 20px; overflow-y: auto; position: relative;
+        }
+    </style>
+</head>
+<body>
+
+<div id="mobile-container">
+    <div class="header">
+        <h1>【北宋陪房丫鬟模拟器】</h1>
+        <p>小红书：云朵の</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🌸 命途档案</div>
+        <div id="status-grid" class="grid-info"></div>
+        <div id="body-desc" style="margin-top:8px; font-size:0.8rem; color:#666; border-top:1px solid #eee; padding-top:5px;"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📜 随身笔记</div>
+        <div class="diary-box">
+            <div id="diary-meta" class="diary-meta"></div>
+            <div id="diary-content"></div>
+            <div id="diary-wish" style="margin-top:8px; border-top:1px dotted #ccc; font-size:0.75rem;"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">👥 宅门群像 (左右滑动)</div>
+        <div id="npc-list" class="npc-scroll"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🏮 家族基业</div>
+        <div id="asset-info" class="grid-info"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📢 汴京风闻</div>
+        <div id="event-log" class="log-container"></div>
+    </div>
+
+    <div class="footer-btns">
+        <button onclick="advanceMonth()">📅 推进下一月</button>
+        <button onclick="showMenu()" style="background:var(--song-green);">💼 事务管理</button>
+    </div>
+</div>
+
+<div id="modal-overlay" onclick="closeModal()">
+    <div class="modal-body" onclick="event.stopPropagation()" id="modal-content"></div>
+</div>
+
+<script>
+/**
+ * 核心逻辑与数据
+ */
+const DATA = {
+    time: { year: 1040, month: 3, season: "春", cycleDay: 1 },
+    player: {
+        name: "招儿", realName: "沈惜辞", age: 6, rank: "粗使丫鬟", salary: 300,
+        money: 100, familySavings: 2000,
+        attrs: { look: 70, mind: 65, sew: 10, read: 5, health: 90, charm: 50 },
+        body: { height: 110, weight: 18, bust: "稚气", trait: "梨涡浅笑" },
+        mood: "安稳", wish: "攒钱为母亲添一只银钗",
+        period: { isBleeding: false, lastDate: 0 },
+        preg: { isPreg: false, months: 0, cooldown: 0 },
+        logs: []
+    },
+    house: {
+        master: "盛家 (太原王氏出身)",
+        husband: "盛官人 (五品员外郎)",
+        location: "汴京积善巷"
+    },
+    npcs: [],
+    events: ["正值官家推行庆历新政，市井间纸贵。"]
+};
+
+// 预设NPC
+const NPC_NAMES = [
+    { name: "盛长柏", role: "大少爷", age: 14, sex: "M", char: "端正" },
+    { name: "王嬷嬷", role: "管事", age: 45, sex: "F", char: "严刻" },
+    { name: "翠蝉", role: "大丫鬟", age: 18, sex: "F", char: "机敏" },
+    { name: "林郎中", role: "医官", age: 32, sex: "M", char: "温润" }
+];
+
+// --- 初始化 ---
+function init() {
+    DATA.npcs = NPC_NAMES.map((t, i) => ({
+        ...t, id: i, favor: 10, backFavor: 10,
+        attrs: { look: Math.floor(Math.random()*40+50) },
+        outfit: "青锦长袍，玉冠束发",
+        thought: "读书志在圣贤...",
+        interactHistory: [],
+        sexAbility: Math.floor(Math.random()*50+40)
+    }));
+    updateUI();
+}
+
+// --- 推进下一月 ---
+function advanceMonth() {
+    // 1. 时间增加
+    DATA.time.month++;
+    if(DATA.time.month > 12) {
+        DATA.time.month = 1; DATA.time.year++; DATA.player.age++;
+    }
+
+    // 2. 经济
+    DATA.player.money += DATA.player.salary;
+    DATA.player.familySavings += 500; // 模拟父母收入
+
+    // 3. 生理逻辑 (12岁以上初潮)
+    if(DATA.player.age >= 12) {
+        DATA.player.period.isBleeding = Math.random() > 0.7; 
+    }
+
+    // 4. 职业晋升判定
+    if(DATA.player.age == 10) careerPath();
+
+    // 5. 随机NPC互动 (满足15条)
+    generateSocialLogs();
+
+    // 6. 随机事件
+    const evs = [
+        "汴京遭遇倒春寒，炭火贵了五成。",
+        "主母赏赐了府中丫鬟每人一吊钱。",
+        "听闻西夏边境又有战事，官人面色忧虑。"
+    ];
+    DATA.events.unshift(evs[Math.floor(Math.random()*evs.length)]);
+
+    updateUI();
+    checkSpecialEvents();
+}
+
+// --- NPC逻辑同步 ---
+function generateSocialLogs() {
+    for(let i=0; i<15; i++) {
+        let n1 = DATA.npcs[Math.floor(Math.random()*DATA.npcs.length)];
+        let n2 = DATA.npcs[Math.floor(Math.random()*DATA.npcs.length)];
+        if(n1.id === n2.id) continue;
+
+        const acts = ["私下讨论份例钱", "因争抢热水起了口角", "共同在后花园赏花", "议论官家新宠"];
+        let log = `${DATA.time.month}月：${n1.name}与${n2.name}${acts[Math.floor(Math.random()*acts.length)]}。`;
+        n1.interactHistory.unshift(log);
+        n2.interactHistory.unshift(log);
+        DATA.player.logs.unshift(log);
+    }
+}
+
+// --- 房事与孕育逻辑 ---
+function intimacyEvent(npcId) {
+    let n = DATA.npcs[npcId];
+    if(DATA.player.age < 16) {
+        alert("年岁尚小，不可越矩。"); return;
+    }
+    if(DATA.player.period.isBleeding) {
+        alert("月事在身，不便承恩。"); return;
+    }
+
+    let harmony = Math.floor(Math.random()*100);
+    let desc = `【房事记录】你与${n.name}同房。${n.name}动作${harmony > 70 ? '温柔体贴' : '略显粗鲁'}，两人${harmony > 50 ? '如鱼得水' : '心意渐远'}。`;
+    
+    // 怀孕判定 (避孕期检查)
+    if(!DATA.player.preg.isPreg && DATA.player.preg.cooldown <= 0) {
+        let pregChance = (harmony + n.sexAbility) / 400; // 基础概率
+        if(Math.random() < pregChance) {
+            DATA.player.preg.isPreg = true;
+            DATA.player.preg.months = 1;
+            desc += " 事后你觉身子疲软，似有胎兆。";
+        }
+    }
+
+    showModal(`<h3>鸳鸯戏水</h3><p>${desc}</p>`);
+    updateUI();
+}
+
+// --- 职业考核 ---
+function careerPath() {
+    let result = "二等丫鬟";
+    if(DATA.player.attrs.sew > 30) result = "绣房领事";
+    if(DATA.player.attrs.read > 20) result = "书房随侍";
+    DATA.player.rank = result;
+    DATA.player.salary += 500;
+    DATA.events.unshift(`【晋升】十岁大考，你凭本事成了${result}！`);
+}
+
+// --- 渲染界面 ---
+function updateUI() {
+    const p = DATA.player;
+    // 状态
+    document.getElementById('status-grid').innerHTML = `
+        <div class="grid-item">👤 姓名：${p.name}</div>
+        <div class="grid-item">等级：${p.rank}</div>
+        <div class="grid-item">容貌：${p.attrs.look}</div>
+        <div class="grid-item">心性：${p.attrs.mind}</div>
+        <div class="grid-item">女红：${p.attrs.sew}</div>
+        <div class="grid-item">识字：${p.attrs.read}</div>
+    `;
+    document.getElementById('body-desc').innerHTML = `
+        <span class="tag">身材</span> ${p.body.height}cm / ${p.body.weight}kg (${p.body.bust}) 
+        <span class="tag" style="background:var(--song-gold)">特点</span> ${p.body.trait}
+        ${p.period.isBleeding ? '<span class="tag period-tag">月事中</span>' : ''}
+        ${p.preg.isPreg ? '<span class="tag" style="background:#f0ad4e">怀胎'+p.preg.months+'月</span>' : ''}
+    `;
+
+    // 日记
+    document.getElementById('diary-meta').innerHTML = `<span>${DATA.time.year}年${DATA.time.month}月</span> <span>心情：${p.mood}</span>`;
+    document.getElementById('diary-content').innerText = `今日在${DATA.house.master}内府听差，${p.rank}的活计虽累，但瞧着攒下的银钱，心里也踏实些。`;
+    document.getElementById('diary-wish').innerHTML = `<span class="highlight">愿望：</span> ${p.wish}`;
+
+    // NPC
+    document.getElementById('npc-list').innerHTML = DATA.npcs.map(n => `
+        <div class="npc-mini-card" onclick="viewNpc(${n.id})">
+            <b>${n.name}</b> (${n.role})<br>
+            好感：${n.favor} | 回馈：${n.backFavor}<br>
+            <small style="color:#999">${n.outfit}</small>
+        </div>
+    `).join('');
+
+    // 资产
+    document.getElementById('asset-info').innerHTML = `
+        <div class="grid-item">💰 私房钱：<span class="highlight">${p.money}文</span></div>
+        <div class="grid-item">🏠 家族：${p.familySavings}文</div>
+    `;
+
+    // 履历
+    document.getElementById('event-log').innerHTML = DATA.player.logs.slice(0, 20).map(l => `<div class="log-line">${l}</div>`).join('');
+}
+
+// --- 交互辅助 ---
+function showModal(html) {
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-overlay').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+function viewNpc(id) {
+    let n = DATA.npcs[id];
+    let html = `
+        <h3>${n.name} 档案</h3>
+        <p><b>容貌：</b>${n.attrs.look} | <b>性格：</b>${n.char}</p>
+        <p><b>衣着：</b>${n.outfit}</p>
+        <p><b>心境：</b>"${n.thought}"</p>
+        <hr>
+        <button onclick="intimacyEvent(${id})">💞 亲密同房</button>
+        <h4 style="margin-top:15px">近日动向</h4>
+        <div style="font-size:0.8rem; color:#666">${n.interactHistory.slice(0,5).join("<br>")}</div>
+    `;
+    showModal(html);
+}
+
+function showMenu() {
+    let html = `
+        <h3>💼 府内事务</h3>
+        <button style="width:100%; margin-bottom:10px;" onclick="doTask('sew')">研习女红 (+技能)</button>
+        <button style="width:100%; margin-bottom:10px;" onclick="doTask('read')">偷翻书卷 (+识字)</button>
+        <button style="width:100%; margin-bottom:10px;" onclick="alert('黑市尚未开启，需等上元节。')">角门黑市</button>
+    `;
+    showModal(html);
+}
+
+function doTask(type) {
+    if(type=='sew') DATA.player.attrs.sew += 2;
+    if(type=='read') DATA.player.attrs.read += 2;
+    DATA.player.money += 10;
+    alert("勤勤恳恳做了一月活计，技能有所长进，获赏10文。");
+    closeModal();
+    updateUI();
+}
+
+function checkSpecialEvents() {
+    // 简单的生育逻辑：满10个月分娩
+    if(DATA.player.preg.isPreg) {
+        DATA.player.preg.months++;
+        if(DATA.player.preg.months > 10) {
+            DATA.player.preg.isPreg = false;
+            DATA.player.preg.months = 0;
+            DATA.player.preg.cooldown = 36; // 避孕3年
+            let dieRoll = Math.random();
+            if(dieRoll < 0.05) alert("不幸遭遇难产，所幸大人保住了。");
+            else alert("天佑母子！顺产得一麟儿，已记入族谱。");
+        }
+    }
+    if(DATA.player.preg.cooldown > 0) DATA.player.preg.cooldown--;
+}
+
+init();
+</script>
+</body>
+</html>
